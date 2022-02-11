@@ -148,4 +148,4 @@ exp_results.csv
 
 
 ### Pegasus Workflow
-![img](pegasus-wf-graph.png)
+![img](docs/pegasus-wf-graph.png)
