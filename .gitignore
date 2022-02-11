@@ -1,0 +1,10 @@
+output/
+scratch/
+full_galaxy_data/
+*.ipynb
+pegasus.properties
+*.dot
+sites.yml
+replicas.yml
+transformations.yml
+workflow.yml
