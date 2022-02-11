@@ -11,11 +11,17 @@ from bin.GalaxyDataset import GalaxyDataset
 logging.basicConfig(level=logging.DEBUG)
 
 #full dataset
-MAX_IMG_0 = 8436
-MAX_IMG_1 = 8069
-MAX_IMG_2 = 579
-MAX_IMG_3 = 3903
-MAX_IMG_4 = 7806
+#MAX_IMG_0 = 8436
+#MAX_IMG_1 = 8069
+#MAX_IMG_2 = 579
+#MAX_IMG_3 = 3903
+#MAX_IMG_4 = 7806
+
+MAX_IMG_0 = 84
+MAX_IMG_1 = 80
+MAX_IMG_2 = 8
+MAX_IMG_3 = 39
+MAX_IMG_4 = 78
 
 
 def split_preprocess_jobs(preprocess_images_job, input_images, postfix):
@@ -73,17 +79,17 @@ def run_workflow(DATA_PATH):
 
     local = Site("local")\
                 .add_directories(
-                    Directory(Directory.SHARED_SCRATCH, "${PWD}/scratch")
+                    Directory(Directory.SHARED_SCRATCH, "/${PWD}/scratch")
                         .add_file_servers(FileServer("file://${PWD}/scratch", Operation.ALL)),
-                    Directory(Directory.SHARED_STORAGE, "${PWD}/storage")
+                    Directory(Directory.SHARED_STORAGE, "/${PWD}/storage")
                         .add_file_servers(FileServer("file://${PWD}/storage", Operation.ALL))
                 )
 
     condorpool = Site("condorpool")\
                 .add_directories(
-                    Directory(Directory.SHARED_SCRATCH, "${PWD}/scratch")
+                    Directory(Directory.SHARED_SCRATCH, "/${PWD}/scratch")
                         .add_file_servers(FileServer("file://${PWD}/scratch", Operation.ALL)),
-                    Directory(Directory.SHARED_STORAGE, "${PWD}/storage")
+                    Directory(Directory.SHARED_STORAGE, "/${PWD}/storage")
                         .add_file_servers(FileServer("file://${PWD}/storage", Operation.ALL))
                 )\
                 .add_condor_profile(universe="vanilla")\
@@ -147,24 +153,24 @@ def run_workflow(DATA_PATH):
     galaxy_container = Container(
                 'galaxy_container',
                 Container.DOCKER,
-                image = "docker://papajim/galaxy-container:latest",
+                image = "docker://papajim/galaxy-container:llnl",
                 image_site = "DockerHub",
     ).add_env(TORCH_HOME="/tmp")
 
     # Data preprocessing part 1: image resize
     preprocess_images = Transformation("preprocess_images", site="local",
-                                    pfn = "${PWD}/bin/preprocess_resize.py"), 
+                                    pfn = "${PWD}/bin/preprocess_resize.py", 
                                     is_stageable= True, container=galaxy_container)
 
     # Data preprocessing part 2: image augmentation
     augment_images = Transformation("augment_images", site="local",
-                                    pfn = "${PWD}/bin/preprocess_augment.py"), 
+                                    pfn = "${PWD}/bin/preprocess_augment.py", 
                                     is_stageable= True, container=galaxy_container)
 
     # HPO: main script
     vgg16_hpo = Transformation("vgg16_hpo",
                    site="local",
-                   pfn = "${PWD}/bin/vgg16_hpo.py"), 
+                   pfn = "${PWD}/bin/vgg16_hpo.py", 
                    is_stageable= True,
                    container=galaxy_container
                 )
@@ -172,7 +178,7 @@ def run_workflow(DATA_PATH):
     # Train Model
     train_model = Transformation("train_model",
                       site="local",
-                      pfn = "${PWD}/bin/train_model_vgg16.py"), 
+                      pfn = "${PWD}/bin/train_model_vgg16.py", 
                       is_stageable= True, 
                       container=galaxy_container
                  )
@@ -180,7 +186,7 @@ def run_workflow(DATA_PATH):
     # Eval Model
     eval_model = Transformation("eval_model",
                      site="local",
-                     pfn = "${PWD}/bin/eval_model_vgg16.py"), 
+                     pfn = "${PWD}/bin/eval_model_vgg16.py", 
                      is_stageable= True, 
                      container=galaxy_container
                  )

@@ -8,3 +8,4 @@ sites.yml
 replicas.yml
 transformations.yml
 workflow.yml
+__pycache__
