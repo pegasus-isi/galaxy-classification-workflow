@@ -1,0 +1,99 @@
+digraph G {
+    subgraph cluster_input_data {
+        input_images [shape=box]
+        
+        label="input data (split into train, val, test)"
+    }
+    
+    subgraph cluster_preprocess_jobs {
+        preprocess_0
+        preprocess_1
+        preprocess_2
+        
+        label="input files evenly divided amongs NUM_WORKERS"
+    }
+    
+    input_images -> preprocess_0
+    input_images -> preprocess_1
+    input_images -> preprocess_2
+    
+    subgraph cluster_class_2_and_3_processed {
+        train_class_2_processed_images [shape=box]
+        train_class_3_processed_images [shape=box]   
+        
+        label="images to be augmented"
+    }
+    
+    train_processed_images [shape=box]
+    val_processed_images [shape=box]
+    test_processed_images [shape=box]
+    
+    preprocess_0 -> train_class_2_processed_images
+    preprocess_1 -> train_class_2_processed_images
+    preprocess_2 -> train_class_2_processed_images
+    preprocess_0 -> train_class_3_processed_images
+    preprocess_1 -> train_class_3_processed_images
+    preprocess_2 -> train_class_3_processed_images
+    
+    preprocess_0 -> train_processed_images
+    preprocess_0 -> val_processed_images
+    preprocess_0 -> test_processed_images
+    
+    preprocess_1 -> train_processed_images
+    preprocess_1 -> val_processed_images
+    preprocess_1 -> test_processed_images
+    
+    preprocess_2 -> train_processed_images
+    preprocess_2 -> val_processed_images
+    preprocess_2 -> test_processed_images
+
+    train_class_2_processed_images -> augment_class_2_images
+    train_class_3_processed_images -> augment_class_3_images
+    
+    additional_train_class_2_processed_images [shape=box]
+    additional_train_class_3_processed_images [shape=box]
+    
+    augment_class_2_images -> additional_train_class_2_processed_images
+    augment_class_3_images -> additional_train_class_3_processed_images
+    
+    additional_train_class_2_processed_images -> vgg16_hpo
+    additional_train_class_3_processed_images -> vgg16_hpo
+    
+    train_processed_images -> vgg16_hpo
+    val_processed_images -> vgg16_hpo
+    
+    "hpo_galaxy_vgg16.pkl" [shape=box]
+    "best_vgg16_hpo_params.txt" [shape=box]
+    
+    vgg16_hpo -> "hpo_galaxy_vgg16.pkl"
+    vgg16_hpo -> "best_vgg16_hpo_params.txt"
+    
+    additional_train_class_2_processed_images -> train_model
+    additional_train_class_3_processed_images -> train_model
+    
+    train_processed_images -> train_model
+    val_processed_images -> train_model 
+    
+    "hpo_galaxy_vgg16.pkl" -> train_model
+    "best_vgg16_hpo_params.txt" -> train_model
+    
+    "checkpoint_vgg16.pkl" [shape=box]
+    "final_vgg16_model.pth" [shape=box]
+    "loss_vgg16.png" [shape=box]
+    
+    train_model -> "checkpoint_vgg16.pkl"
+    train_model -> "final_vgg16_model.pth"
+    train_model -> "loss_vgg16.png"
+    
+    "final_vgg16_model.pth" -> eval_model
+    test_processed_images -> eval_model 
+    
+    "exp_results.csv" [shape=box]
+    "final_confusion_matrix_norm.png" [shape=box]
+    
+    eval_model -> "exp_results.csv"
+    eval_model -> "final_confusion_matrix_norm.png"
+    
+    label="Galaxy Classification Workflow"
+    labelloc="t"
+}
