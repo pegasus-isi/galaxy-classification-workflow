@@ -11,21 +11,20 @@ from bin.GalaxyDataset import GalaxyDataset
 logging.basicConfig(level=logging.DEBUG)
 
 #full dataset
-MAX_IMG_0 = 8436
-MAX_IMG_1 = 8069
-MAX_IMG_2 = 579
-MAX_IMG_3 = 3903
-MAX_IMG_4 = 7806
+MAX_IMG_0 = 84
+MAX_IMG_1 = 80
+MAX_IMG_2 = 8
+MAX_IMG_3 = 39
+MAX_IMG_4 = 78
 
-#MAX_IMG_0 = 84
-#MAX_IMG_1 = 80
-#MAX_IMG_2 = 8
-#MAX_IMG_3 = 39
-#MAX_IMG_4 = 78
-
+#MAX_IMG_0 = 100 #8436
+#MAX_IMG_1 = 100 #8069
+#MAX_IMG_2 = 100 #579
+#MAX_IMG_3 = 100 #3903
+#MAX_IMG_4 = 100 #7806
 
 def split_preprocess_jobs(preprocess_images_job, input_images, postfix):
-
+    
     resized_images = []
     job_input_output = {}
 
@@ -46,8 +45,9 @@ def split_preprocess_jobs(preprocess_images_job, input_images, postfix):
         preprocess_images_job[curr].add_args("-f {}".format(" ".join(tmp_file_list)))
         preprocess_images_job[curr].add_inputs(*job_input_output[curr]["input"])
         preprocess_images_job[curr].add_outputs(*job_input_output[curr]["output"])
-
+        
     return resized_images
+
 
 
 def add_augmented_images(class_str, num, start_num):
@@ -69,37 +69,16 @@ def create_files_hpo(input_files):
 
 def run_workflow(DATA_PATH):
     props = Properties()
-    props["pegasus.monitord.encoding"] = "json"
-    props["pegasus.catalog.workflow.amqp.url"] = "amqp://friend:donatedata@msgs.pegasus.isi.edu:5672/prod/workflows"
+    #props["pegasus.transfer.links"] = "true"
+    #props["pegasus.transfer.bypass.input.staging"] = "true"
+    #props["pegasus.transfer.threads"] = "128"
+    if PMC:
+        props["pegasus.job.aggregator"] = "mpiexec"
+        props["pegasus.data.configuration"] = "sharedfs"
+    if CUSTOM_SITES_FILE is not None:
+        print("==> Overriding site file with given site catalog: {}".format(CUSTOM_SITES_FILE))
+        props["pegasus.catalog.site.file"] = CUSTOM_SITES_FILE
     props.write()
-
-    ### ADD SITE CATALOG
-    #-------------------------------------------------------------------------------------------------------
-    sc = SiteCatalog()
-
-    local = Site("local")\
-                .add_directories(
-                    Directory(Directory.SHARED_SCRATCH, "/${PWD}/scratch")
-                        .add_file_servers(FileServer("file://${PWD}/scratch", Operation.ALL)),
-                    Directory(Directory.SHARED_STORAGE, "/${PWD}/storage")
-                        .add_file_servers(FileServer("file://${PWD}/storage", Operation.ALL))
-                )
-
-    condorpool = Site("condorpool")\
-                .add_directories(
-                    Directory(Directory.SHARED_SCRATCH, "/${PWD}/scratch")
-                        .add_file_servers(FileServer("file://${PWD}/scratch", Operation.ALL)),
-                    Directory(Directory.SHARED_STORAGE, "/${PWD}/storage")
-                        .add_file_servers(FileServer("file://${PWD}/storage", Operation.ALL))
-                )\
-                .add_condor_profile(universe="vanilla")\
-                .add_pegasus_profile(
-                    style="condor",
-                    data_configuration="condorio"
-                )
-    
-    sc.add_sites(local, condorpool)
-    sc.write()
 
     ### ADD INPUT FILES TO REPILCA CATALOG
     #-------------------------------------------------------------------------------------------------------
@@ -123,24 +102,24 @@ def run_workflow(DATA_PATH):
     #-------------------------------------------------------------------------------------------------------
     data_loader_fn = "data_loader.py"
     data_loader_file = File(data_loader_fn)
-    rc.add_replica("local", data_loader_fn, os.path.join(os.getcwd(), "bin/" + data_loader_fn ))
+    rc.add_replica("condorpool", data_loader_fn, os.path.join("file://${PWD}/bin/", data_loader_fn))
 
     model_selction_fn = "model_selection.py"
     model_selction_file = File(model_selction_fn)
-    rc.add_replica("local", model_selction_fn, os.path.join(os.getcwd(),"bin/" + model_selction_fn ))
+    rc.add_replica("condorpool", model_selction_fn, os.path.join("file://${PWD}/bin/", model_selction_fn))
 
 
     # FILES FOR vgg16_hpo.py VGG 16
     #--------------------------------------------------------------------------------------------------------
     vgg16_pkl = "hpo_galaxy_vgg16.pkl"
     vgg16_pkl_file = File(vgg16_pkl)
-    rc.add_replica("local", vgg16_pkl_file, os.path.join(os.getcwd(), "config", vgg16_pkl_file.lfn))    
+    rc.add_replica("condorpool", vgg16_pkl, os.path.join("file://${PWD}/config/", vgg16_pkl))    
 
     # FILES FOR train_model.py 
     #--------------------------------------------------------------------------------------------------------
     checkpoint_vgg16_pkl = "checkpoint_vgg16.pkl"
     checkpoint_vgg16_pkl_file = File(checkpoint_vgg16_pkl)
-    rc.add_replica("local", checkpoint_vgg16_pkl_file, os.path.join(os.getcwd(), "config", checkpoint_vgg16_pkl_file.lfn))
+    rc.add_replica("condorpool", checkpoint_vgg16_pkl, os.path.join("file://${PWD}/config/", checkpoint_vgg16_pkl))
 
     rc.write()
 
@@ -149,50 +128,52 @@ def run_workflow(DATA_PATH):
     tc = TransformationCatalog()
 
 
-    # define container for the jobs
-    galaxy_container = Container(
-                'galaxy_container',
-                Container.DOCKER,
-                image = "docker://papajim/galaxy-container:llnl",
-                image_site = "DockerHub",
-    ).add_env(TORCH_HOME="/tmp")
-
     # Data preprocessing part 1: image resize
-    preprocess_images = Transformation("preprocess_images", site="local",
-                                    pfn = "${PWD}/bin/preprocess_resize.py", 
-                                    is_stageable= True, container=galaxy_container)
+    preprocess_images = Transformation("preprocess_images", site="condorpool",
+                                    pfn = "file://${PWD}/bin/preprocess_resize.py", 
+                                    is_stageable= False)
 
     # Data preprocessing part 2: image augmentation
-    augment_images = Transformation("augment_images", site="local",
-                                    pfn = "${PWD}/bin/preprocess_augment.py", 
-                                    is_stageable= True, container=galaxy_container)
+    augment_images = Transformation("augment_images", site="condorpool",
+                                    pfn = "file://${PWD}/bin/preprocess_augment.py", 
+                                    is_stageable= False)
 
     # HPO: main script
     vgg16_hpo = Transformation("vgg16_hpo",
-                   site="local",
-                   pfn = "${PWD}/bin/vgg16_hpo.py", 
-                   is_stageable= True,
-                   container=galaxy_container
-                )
+                   site="condorpool",
+                   pfn = "file://${PWD}/bin/vgg16_hpo.py", 
+                   is_stageable= False,
+                )#\
+                #.add_pegasus_profile(cores=24, gpus=1, memory=131072, runtime=43200)
 
     # Train Model
     train_model = Transformation("train_model",
-                      site="local",
-                      pfn = "${PWD}/bin/train_model_vgg16.py", 
-                      is_stageable= True, 
-                      container=galaxy_container
-                 )
+                      site="condorpool",
+                      pfn = "file://${PWD}/bin/train_model_vgg16.py", 
+                      is_stageable= False, 
+                  )#\
+                  #.add_pegasus_profile(cores=24, gpus=1, memory=131072, runtime=43200)
 
     # Eval Model
     eval_model = Transformation("eval_model",
-                     site="local",
-                     pfn = "${PWD}/bin/eval_model_vgg16.py", 
-                     is_stageable= True, 
-                     container=galaxy_container
-                 )
-
-    tc.add_containers(galaxy_container)
-
+                     site="condorpool",
+                     pfn = "file://${PWD}/bin/eval_model_vgg16.py", 
+                     is_stageable= False,
+                 )#\
+                #.add_pegasus_profile(cores=24, gpus=1, memory=131072, runtime=43200)
+    if PMC:
+        pmc_wrapper_pfn = "/usr/workspace/iopp/software/iopp/apps/galaxy_pegasus/pmc_lassen.sh"
+        n_nodes = 2
+        path = os.environ["PATH"]+":."
+        pmc = (
+            Transformation("mpiexec", namespace="pegasus", site="condorpool", pfn=pmc_wrapper_pfn, is_stageable=False)
+            .add_profiles(Namespace.PEGASUS, key="job.aggregator", value="mpiexec")
+            .add_profiles(Namespace.PEGASUS, key="nodes", value=1)
+            .add_profiles(Namespace.PEGASUS, key="ppn", value=32)
+            .add_profiles(Namespace.CONDOR, key="getenv", value="*")
+            .add_profiles(Namespace.ENV, key="PATH", value=path)
+        )
+        tc.add_transformations(pmc)
     tc.add_transformations(
         preprocess_images,
         augment_images,
@@ -218,8 +199,7 @@ def run_workflow(DATA_PATH):
     train_files_class_3   = [i for i in output_images if train_class_3 in i]
     input_aug_class_3     = [ File(file.split("/")[-1].split(".")[0] + "_proc.jpg") for file in train_files_class_3 ]
     output_aug_class_3    = add_augmented_images("class_3", NUM_CLASS_3, 4000)
-    
-    
+
     tmp_file_list = []
     for f in input_aug_class_2:
         tmp_file_list.append(f.lfn)
@@ -227,7 +207,7 @@ def run_workflow(DATA_PATH):
                         .add_args("--class_str class_2 --num {} -f {}".format(NUM_CLASS_2, " ".join(tmp_file_list)))\
                         .add_inputs(*input_aug_class_2)\
                         .add_outputs(*output_aug_class_2)
-    
+
     tmp_file_list = []
     for f in input_aug_class_3:
         tmp_file_list.append(f.lfn)
@@ -283,18 +263,27 @@ def run_workflow(DATA_PATH):
                 job_train_model,job_eval_model)  
 
 
+    wf.write()
+    
     # EXECUTE THE WORKFLOW
     #-------------------------------------------------------------------------------------
     try:
-        wf.plan(submit=True, sites=["condorpool"], output_sites=["local"])
-        wf.wait()
-        wf.statistics()
+        plan_site = [EXEC_SITE]
+        cluster_type = None
+        if PMC:
+            cluster_type = ["whole"]
+        wf.plan(
+                dir=os.getcwd(),
+                submit=False,
+                sites=plan_site,
+                relative_dir="run_dir",
+                output_dir=os.path.join(os.getcwd(), "output"),
+                cleanup="leaf",
+                force=True,
+                cluster=cluster_type)
     except PegasusClientError as e:
-        print(e.output)   
-    #graph_filename = "galaxy-wf.dot"
-    #wf.graph(include_files=True, no_simplify=True, label="xform-id", output = graph_filename)
-
-
+        print(e.output)
+    
 def main():
     
     start = time.time()
@@ -308,18 +297,22 @@ def main():
     global NUM_WORKERS
     global NUM_CLASS_2
     global NUM_CLASS_3
-
+    global PMC
+    global CUSTOM_SITES_FILE
+    global EXEC_SITE
     
     parser = argparse.ArgumentParser(description="Galaxy Classification")   
     parser.add_argument('--batch_size', type=int, default=32, help='batch size for training')
     parser.add_argument('--seed', type=int, default=10, help='select seed number for reproducibility')
-    parser.add_argument('--data_path', type=str, default='full_galaxy_data/',help='path to dataset ')
+    parser.add_argument('--data_path', type=str, default='file://${PWD}/full_galaxy_data/',help='path to dataset ')
     parser.add_argument('--epochs', type=int,default=10, help = "number of training epochs")  
     parser.add_argument('--trials', type=int,default=1, help = "number of trials") 
     parser.add_argument('--num_workers', type=int, default= 20, help = "number of workers")
-    parser.add_argument('--num_class_2', type=int, default= 7000, help = "number of augmented class 2 files")
-    parser.add_argument('--num_class_3', type=int, default= 4000, help = "number of augmented class 3 files")
-
+    parser.add_argument('--num_class_2', type=int, default= 10, help = "number of augmented class 2 files")
+    parser.add_argument('--num_class_3', type=int, default= 10, help = "number of augmented class 3 files")
+    parser.add_argument('--pmc', action='store_true',dest='use_pmc', help='Use PMC')
+    parser.add_argument("--sites", metavar="STR", type=str, default=None, help="Use an existing site catalog (XML OR YAML)")
+    parser.add_argument("--execution_site", metavar="STR", type=str, default="local", help="Execution site name (default: local)")
     
 
 
@@ -332,6 +325,9 @@ def main():
     NUM_WORKERS = ARGS.num_workers
     NUM_CLASS_2 = ARGS.num_class_2
     NUM_CLASS_3 = ARGS.num_class_3
+    PMC         = ARGS.use_pmc
+    CUSTOM_SITES_FILE = ARGS.sites
+    EXEC_SITE   = ARGS.execution_site
 
     run_workflow(DATA_PATH)
     
@@ -345,3 +341,4 @@ def main():
 if __name__ == "__main__":
     
     main()
+
