@@ -37,18 +37,22 @@ class GalaxyDataset(Dataset):
 
         if prefix == "train":
             train_transforms = []
+            train_transforms.append(torchvision.transforms.ToPILImage())
             train_transforms.append(torchvision.transforms.ColorJitter(brightness=(0,1.2), contrast = (0.2, 1.8)))
             train_transforms.append(torchvision.transforms.RandomHorizontalFlip(p=0.5))
             train_transforms.append(torchvision.transforms.RandomVerticalFlip(p=0.5))
 #            train_transforms.append(rotation_transform)
+            train_transforms.append(torchvision.transforms.ToTensor())
             self.train_transforms = torchvision.transforms.Compose(train_transforms)
         
         if prefix == "trainval":
             train_transforms = []
+            train_transforms.append(torchvision.transforms.ToPILImage())
             train_transforms.append(torchvision.transforms.ColorJitter(brightness=(0,1.2), contrast = (0.2, 1.8)))
             train_transforms.append(torchvision.transforms.RandomHorizontalFlip(p=0.5))
             train_transforms.append(torchvision.transforms.RandomVerticalFlip(p=0.5))
 #            train_transforms.append(rotation_transform)
+            train_transforms.append(torchvision.transforms.ToTensor())
             self.train_transforms = torchvision.transforms.Compose(train_transforms)
      
         class_0_files = []

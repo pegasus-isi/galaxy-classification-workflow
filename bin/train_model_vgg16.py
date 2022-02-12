@@ -79,7 +79,7 @@ class ToTensorRescale(object):
     """Convert ndarrays in sample to Tensors."""
     def __call__(self, sample):
         image, label = sample["image"], sample["label"]
-        image = image/255
+        image = image//255
         image = np.resize(image,(256,256,3))
         image = image.transpose((2, 0, 1))
         return {"image":torch.from_numpy(image),

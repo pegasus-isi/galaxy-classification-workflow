@@ -11,17 +11,17 @@ from bin.GalaxyDataset import GalaxyDataset
 logging.basicConfig(level=logging.DEBUG)
 
 #full dataset
-#MAX_IMG_0 = 8436
-#MAX_IMG_1 = 8069
-#MAX_IMG_2 = 579
-#MAX_IMG_3 = 3903
-#MAX_IMG_4 = 7806
+MAX_IMG_0 = 8436
+MAX_IMG_1 = 8069
+MAX_IMG_2 = 579
+MAX_IMG_3 = 3903
+MAX_IMG_4 = 7806
 
-MAX_IMG_0 = 84
-MAX_IMG_1 = 80
-MAX_IMG_2 = 8
-MAX_IMG_3 = 39
-MAX_IMG_4 = 78
+#MAX_IMG_0 = 84
+#MAX_IMG_1 = 80
+#MAX_IMG_2 = 8
+#MAX_IMG_3 = 39
+#MAX_IMG_4 = 78
 
 
 def split_preprocess_jobs(preprocess_images_job, input_images, postfix):
