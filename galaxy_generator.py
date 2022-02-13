@@ -72,6 +72,7 @@ def run_workflow(DATA_PATH):
     #props["pegasus.transfer.links"] = "true"
     #props["pegasus.transfer.bypass.input.staging"] = "true"
     #props["pegasus.transfer.threads"] = "128"
+    props["pegasus.integrity.checking"] = "none"
     if PMC:
         props["pegasus.job.aggregator"] = "mpiexec"
         props["pegasus.data.configuration"] = "sharedfs"
