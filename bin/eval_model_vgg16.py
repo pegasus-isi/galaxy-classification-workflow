@@ -32,7 +32,13 @@ except Exception as e:
     pass
 
 # Constant variabless
-DEVICE   = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = torch.device("cpu")
+if torch.cuda.is_available():
+    print("Using device: CUDA")
+    DEVICE = torch.device("cuda")
+else:
+    print("Using device: CPU")
+
 IMG_SIZE = [256, 256]
 tensor   = (3,256, 256) # this is to predict the in_features of FC Layers
 
