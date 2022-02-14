@@ -11,17 +11,17 @@ from bin.GalaxyDataset import GalaxyDataset
 logging.basicConfig(level=logging.DEBUG)
 
 #full dataset
-MAX_IMG_0 = 84
-MAX_IMG_1 = 80
-MAX_IMG_2 = 8
-MAX_IMG_3 = 39
-MAX_IMG_4 = 78
+#MAX_IMG_0 = 84
+#MAX_IMG_1 = 80
+#MAX_IMG_2 = 8
+#MAX_IMG_3 = 39
+#MAX_IMG_4 = 78
 
-#MAX_IMG_0 = 100 #8436
-#MAX_IMG_1 = 100 #8069
-#MAX_IMG_2 = 100 #579
-#MAX_IMG_3 = 100 #3903
-#MAX_IMG_4 = 100 #7806
+MAX_IMG_0 = 8436
+MAX_IMG_1 = 8069
+MAX_IMG_2 = 579
+MAX_IMG_3 = 3903
+MAX_IMG_4 = 7806
 
 def split_preprocess_jobs(preprocess_images_job, input_images, postfix):
     
@@ -72,6 +72,7 @@ def run_workflow(DATA_PATH):
     #props["pegasus.transfer.links"] = "true"
     #props["pegasus.transfer.bypass.input.staging"] = "true"
     #props["pegasus.transfer.threads"] = "128"
+    props["pegasus.register"] = "false"
     props["pegasus.integrity.checking"] = "none"
     if PMC:
         props["pegasus.job.aggregator"] = "mpiexec"
@@ -144,24 +145,24 @@ def run_workflow(DATA_PATH):
                    site="condorpool",
                    pfn = "file://${PWD}/bin/vgg16_hpo.py", 
                    is_stageable= False,
-                )#\
-                #.add_pegasus_profile(cores=24, gpus=1, memory=131072, runtime=43200)
+                )\
+                .add_pegasus_profile(cores=24, gpus=1, memory=131072, runtime=43200)
 
     # Train Model
     train_model = Transformation("train_model",
                       site="condorpool",
                       pfn = "file://${PWD}/bin/train_model_vgg16.py", 
                       is_stageable= False, 
-                  )#\
-                  #.add_pegasus_profile(cores=24, gpus=1, memory=131072, runtime=43200)
+                  )\
+                  .add_pegasus_profile(cores=24, gpus=1, memory=131072, runtime=43200)
 
     # Eval Model
     eval_model = Transformation("eval_model",
                      site="condorpool",
                      pfn = "file://${PWD}/bin/eval_model_vgg16.py", 
                      is_stageable= False,
-                 )#\
-                #.add_pegasus_profile(cores=24, gpus=1, memory=131072, runtime=43200)
+                 )\
+                .add_pegasus_profile(cores=24, gpus=1, memory=131072, runtime=43200)
     if PMC:
         pmc_wrapper_pfn = "/usr/workspace/iopp/software/iopp/apps/galaxy_pegasus/pmc_lassen.sh"
         n_nodes = 2
@@ -309,8 +310,8 @@ def main():
     parser.add_argument('--epochs', type=int,default=10, help = "number of training epochs")  
     parser.add_argument('--trials', type=int,default=1, help = "number of trials") 
     parser.add_argument('--num_workers', type=int, default= 20, help = "number of workers")
-    parser.add_argument('--num_class_2', type=int, default= 10, help = "number of augmented class 2 files")
-    parser.add_argument('--num_class_3', type=int, default= 10, help = "number of augmented class 3 files")
+    parser.add_argument('--num_class_2', type=int, default= 7000, help = "number of augmented class 2 files")
+    parser.add_argument('--num_class_3', type=int, default= 4000, help = "number of augmented class 3 files")
     parser.add_argument('--pmc', action='store_true',dest='use_pmc', help='Use PMC')
     parser.add_argument("--sites", metavar="STR", type=str, default=None, help="Use an existing site catalog (XML OR YAML)")
     parser.add_argument("--execution_site", metavar="STR", type=str, default="local", help="Execution site name (default: local)")
