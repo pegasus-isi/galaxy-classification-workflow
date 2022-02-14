@@ -263,13 +263,18 @@ def objective(trial,direction = "minimize"):
 
     
     layer     = trial.suggest_categorical("layer",["21"])    
-    model     = VGG16Model(layer).to(DEVICE)
-    model     = torch.nn.DataParallel(model)
-    criterion = torch.nn.CrossEntropyLoss().to(DEVICE)
+    model     = VGG16Model(layer)
     lr_body   = trial.suggest_categorical("lr_body", [1e-7, 1e-8, 1e-9])
     lr_head   = trial.suggest_categorical("lr_head", [1e-4, 1e-5, 1e-6])
     optimizer = torch.optim.Adam([{'params': model.body.parameters(), 'lr':lr_body},
                                  {'params':model.head.parameters(), 'lr':lr_head}])
+    
+    if (torch.cuda.device_count() > 1):
+        print("Using {} CUDA Devices".format(torch.cuda.device_count()))
+        model = torch.nn.DataParallel(model)
+   
+    model     = model.to(DEVICE)
+    criterion = torch.nn.CrossEntropyLoss().to(DEVICE)
     
     train_loss = []
     val_loss   = []

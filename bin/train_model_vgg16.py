@@ -273,10 +273,16 @@ def train_model(best_params):
     lr_body = best_params["lr_body"]
     lr_head = best_params["lr_head"]
     
-    model     = VGG16Model(layer).to(DEVICE)    
-    criterion = torch.nn.CrossEntropyLoss().to(DEVICE)
+    model     = VGG16Model(layer)
     optimizer = torch.optim.Adam([{'params': model.body.parameters(), 'lr':lr_body},
                                  {'params':model.head.parameters(), 'lr':lr_head}])
+    
+    if (torch.cuda.device_count() > 1):
+        print("Using {} CUDA Devices".format(torch.cuda.device_count()))
+        model = torch.nn.DataParallel(model)
+   
+    model     = model.to(DEVICE)
+    criterion = torch.nn.CrossEntropyLoss().to(DEVICE)
     
     train_loss = []
     val_loss   = []
