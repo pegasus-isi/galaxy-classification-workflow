@@ -71,7 +71,7 @@ def run_workflow(DATA_PATH):
     props = Properties()
     #props["pegasus.transfer.links"] = "true"
     #props["pegasus.transfer.bypass.input.staging"] = "true"
-    #props["pegasus.transfer.threads"] = "128"
+    props["pegasus.transfer.threads"] = "64"
     props["pegasus.register"] = "false"
     props["pegasus.integrity.checking"] = "none"
     if PMC:
