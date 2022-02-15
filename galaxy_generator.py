@@ -146,7 +146,7 @@ def run_workflow(DATA_PATH):
                    pfn = "file://${PWD}/bin/vgg16_hpo.py", 
                    is_stageable= False,
                 )\
-                .add_pegasus_profile(cores=24, gpus=1, memory=131072, runtime=43200)
+                .add_pegasus_profile(cores=40, gpus=4, memory=131072, runtime=43200)
 
     # Train Model
     train_model = Transformation("train_model",
@@ -154,7 +154,7 @@ def run_workflow(DATA_PATH):
                       pfn = "file://${PWD}/bin/train_model_vgg16.py", 
                       is_stageable= False, 
                   )\
-                  .add_pegasus_profile(cores=24, gpus=1, memory=131072, runtime=43200)
+                  .add_pegasus_profile(cores=40, gpus=4, memory=131072, runtime=43200)
 
     # Eval Model
     eval_model = Transformation("eval_model",
@@ -162,7 +162,7 @@ def run_workflow(DATA_PATH):
                      pfn = "file://${PWD}/bin/eval_model_vgg16.py", 
                      is_stageable= False,
                  )\
-                .add_pegasus_profile(cores=24, gpus=1, memory=131072, runtime=43200)
+                .add_pegasus_profile(cores=40, gpus=1, memory=131072, runtime=43200)
     if PMC:
         pmc_wrapper_pfn = "/usr/workspace/iopp/software/iopp/apps/galaxy_pegasus/pmc_lassen.sh"
         n_nodes = 2
